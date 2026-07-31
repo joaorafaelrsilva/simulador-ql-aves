@@ -10,6 +10,17 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Helper para compatibilidade de largura no Streamlit
+def get_width_kw(stretch=True):
+    try:
+        import streamlit as st_test
+        ver = tuple(map(int, st_test.__version__.split(".")[:2]))
+        if ver >= (1, 60):
+            return {"width": "stretch" if stretch else "content"}
+    except Exception:
+        pass
+    return {"use_container_width": stretch}
+
 # -----------------------------------------------------------------------------
 # AUTENTICAÇÃO E SESSÃO
 # -----------------------------------------------------------------------------
@@ -34,7 +45,7 @@ def login():
         username = st.text_input("Usuário")
         password = st.text_input("Senha", type="password")
         
-        if st.button("Entrar", use_container_width=True):
+        if st.button("Entrar", **get_width_kw(True)):
             u = username.strip().lower()
             if u in USERS_DB and USERS_DB[u]["pass"] == password:
                 st.session_state["authenticated"] = True
@@ -149,7 +160,7 @@ if menu == "📊 Dashboard Executivo":
     # Recálculos no DataFrame
     df["Pecas_Hora_Nominal"] = 3600 / df["Tempo_Padrao_s"]
     df["Pecas_Hora_Efetiva"] = df["Pecas_Hora_Nominal"] * (df["Eficiencia_Op"] / 100.0)
-    df["Carga_Trabalho"] = df["Volume_Hora_Aves"] / df["Pecas_Hora_Efetiva"]
+    df["Carga_Trabalho"] = df["Volume_Hora_Aves"] / np.maximum(df["Pecas_Hora_Efetiva"], 1e-6)
     df["QL_Base"] = np.ceil(df["Carga_Trabalho"])
     df["QL_Ideal"] = np.ceil(df["QL_Base"] * (1 + df["AFF_Percent"] / 100.0))
     
@@ -170,7 +181,7 @@ if menu == "📊 Dashboard Executivo":
     st.markdown("---")
     st.subheader("💡 Média de Eficiência Operacional por Setor")
     df_ef = df.groupby("Setor")["Eficiencia_Op"].mean().reset_index()
-    st.dataframe(df_ef.style.format({"Eficiencia_Op": "{:.1f}%"}), use_container_width=True)
+    st.dataframe(df_ef.style.format({"Eficiencia_Op": "{:.1f}%"}), **get_width_kw(True))
 
 # -----------------------------------------------------------------------------
 # 2. PLANEJAMENTO DE PRODUÇÃO & SKUS
@@ -218,7 +229,7 @@ elif menu == "⚙️ Planejamento de Produção & SKUs":
             "Plano_Mensal_kg": st.column_config.NumberColumn("Plano Mensal (kg)", format="%.2f kg"),
             "Plano_Hora_kg": st.column_config.NumberColumn("Plano Hora (kg/h)", format="%.2f kg/h")
         },
-        use_container_width=True
+        **get_width_kw(True)
     )
 
 # -----------------------------------------------------------------------------
@@ -241,9 +252,9 @@ elif menu == "🧮 Simulador de Quadro de Lotação (QL) & Eficiências":
     setor_sel = st.selectbox("Filtrar por Setor de Produção:", setores)
     
     if setor_sel != "Todos":
-        df_sub = df[df["Setor"] == setor_sel]
+        df_sub = df[df["Setor"] == setor_sel].copy()
     else:
-        df_sub = df
+        df_sub = df.copy()
         
     st.subheader("Inputs de Eficiência & Parâmetros por Posto")
     edited_df = st.data_editor(
@@ -255,21 +266,21 @@ elif menu == "🧮 Simulador de Quadro de Lotação (QL) & Eficiências":
             "QL_Aprovado": st.column_config.NumberColumn("QL Aprovado", min_value=0, max_value=100),
             "Volume_Hora_Aves": st.column_config.NumberColumn("Volume (aves/h)", min_value=0, max_value=20000)
         },
-        use_container_width=True,
+        **get_width_kw(True),
         num_rows="dynamic"
     )
     
-    # Atualiza sessão
+    # Atualiza a sessão principal
     st.session_state["df_posts"].update(edited_df)
     
-    # Exibe Resultados Calculados
+    # Exibe Resultados Calculados em Tempo Real
     st.markdown("---")
     st.subheader("📈 Resultado da Simulação em Tempo Real")
     
     res_df = edited_df.copy()
     res_df["Pecas_Hora_Nominal"] = 3600.0 / res_df["Tempo_Padrao_s"]
     res_df["Pecas_Hora_Real"] = res_df["Pecas_Hora_Nominal"] * (res_df["Eficiencia_Op"] / 100.0)
-    res_df["Carga_Trabalho"] = res_df["Volume_Hora_Aves"] / res_df["Pecas_Hora_Real"]
+    res_df["Carga_Trabalho"] = res_df["Volume_Hora_Aves"] / np.maximum(res_df["Pecas_Hora_Real"], 1e-6)
     res_df["QL_Base"] = np.ceil(res_df["Carga_Trabalho"])
     res_df["QL_Ideal"] = np.ceil(res_df["QL_Base"] * (1.0 + res_df["AFF_Percent"] / 100.0))
     res_df["Desvio_QL"] = res_df["QL_Ideal"] - res_df["QL_Aprovado"]
@@ -281,9 +292,9 @@ elif menu == "🧮 Simulador de Quadro de Lotação (QL) & Eficiências":
             "Carga_Trabalho": "{:.2f}",
             "QL_Aprovado": "{:.0f}",
             "QL_Ideal": "{:.0f}",
-            "Desvio_QL": "{:+d}"
+            "Desvio_QL": "{:+.0f}"
         }),
-        use_container_width=True
+        **get_width_kw(True)
     )
 
 # -----------------------------------------------------------------------------
@@ -314,7 +325,7 @@ elif menu == "❄️ Capacidade de Túneis & Girofreezer":
             "Ocupacao_%": st.column_config.NumberColumn("Ocupação (%)", format="%.1f %%"),
             "Horas_Ocupadas": st.column_config.NumberColumn("Horas Necessárias", format="%.2f h")
         },
-        use_container_width=True
+        **get_width_kw(True)
     )
 
 # -----------------------------------------------------------------------------
@@ -323,7 +334,7 @@ elif menu == "❄️ Capacidade de Túneis & Girofreezer":
 elif menu == "📋 Auditoria & Logs de Acesso":
     st.title("📋 Registro de Logs & Exportação de Dados")
     
-    st.markdown("Historico de alterações e exportação dos relatórios da simulação.")
+    st.markdown("Histórico de alterações e exportação dos relatórios da simulação.")
     
     logs = [
         {"Data/Hora": "2026-07-30 02:10:00", "Usuário": "Gestor Industrial", "Perfil": "Administrador", "Ação": "Login Efetuado"},
