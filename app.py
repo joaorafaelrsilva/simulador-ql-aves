@@ -1,7 +1,6 @@
-﻿import streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
-
 
 # Configuração da página
 st.set_page_config(
@@ -10,7 +9,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
 
 # -----------------------------------------------------------------------------
 # AUTENTICAÇÃO E SESSÃO
@@ -21,12 +19,10 @@ USERS_DB = {
     "consulta": {"pass": "view123", "role": "Consulta", "name": "Visualizador"}
 }
 
-
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
     st.session_state["user_role"] = None
     st.session_state["user_name"] = None
-
 
 def login():
     st.markdown("<h2 style='text-align: center; color: #1a365d;'>🐔 Simulador QL Aves - Unidade Jarinu</h2>", unsafe_allow_html=True)
@@ -49,11 +45,9 @@ def login():
             else:
                 st.error("Usuário ou senha incorretos.")
 
-
 if not st.session_state["authenticated"]:
     login()
     st.stop()
-
 
 # Logout na barra lateral
 st.sidebar.markdown(f"**Usuário:** {st.session_state['user_name']}")
@@ -62,9 +56,7 @@ if st.sidebar.button("Sair / Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
 
-
 st.sidebar.markdown("---")
-
 
 # -----------------------------------------------------------------------------
 # BANCO DE DADOS DE REFERÊNCIA DE POSTOS E EFICIÊNCIA
@@ -130,7 +122,6 @@ def get_initial_data():
     ]
     return pd.DataFrame(data)
 
-
 # -----------------------------------------------------------------------------
 # MENU LATERAL - NAVEGAÇÃO
 # -----------------------------------------------------------------------------
@@ -142,11 +133,9 @@ menu = st.sidebar.radio("Navegação do Sistema", [
     "📋 Auditoria & Logs de Acesso"
 ])
 
-
 # Load Session Data
 if "df_posts" not in st.session_state:
     st.session_state["df_posts"] = get_initial_data()
-
 
 # -----------------------------------------------------------------------------
 # 1. DASHBOARD EXECUTIVO
@@ -182,7 +171,6 @@ if menu == "📊 Dashboard Executivo":
     st.subheader("💡 Média de Eficiência Operacional por Setor")
     df_ef = df.groupby("Setor")["Eficiencia_Op"].mean().reset_index()
     st.dataframe(df_ef.style.format({"Eficiencia_Op": "{:.1f}%"}), use_container_width=True)
-
 
 # -----------------------------------------------------------------------------
 # 2. PLANEJAMENTO DE PRODUÇÃO & SKUS
@@ -232,7 +220,6 @@ elif menu == "⚙️ Planejamento de Produção & SKUs":
         },
         use_container_width=True
     )
-
 
 # -----------------------------------------------------------------------------
 # 3. SIMULADOR DE QUADRO DE LOTAÇÃO & EFICIÊNCIA DOS POSTOS
@@ -299,7 +286,6 @@ elif menu == "🧮 Simulador de Quadro de Lotação (QL) & Eficiências":
         use_container_width=True
     )
 
-
 # -----------------------------------------------------------------------------
 # 4. CAPACIDADE DE TÚNEIS & GIROFREEZER
 # -----------------------------------------------------------------------------
@@ -331,7 +317,6 @@ elif menu == "❄️ Capacidade de Túneis & Girofreezer":
         use_container_width=True
     )
 
-
 # -----------------------------------------------------------------------------
 # 5. AUDITORIA & LOGS
 # -----------------------------------------------------------------------------
@@ -357,3 +342,4 @@ elif menu == "📋 Auditoria & Logs de Acesso":
         file_name="Simulacao_QL_Aves_Jarinu.csv",
         mime="text/csv"
     )
+
